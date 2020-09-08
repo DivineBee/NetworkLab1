@@ -23,18 +23,17 @@ IDE: IntelliJ IDEA
 Show examples of usage:
 `
 
-    CloseableHttpClient client = HttpClientBuilder.create().build();
-            HttpGet request = new HttpGet(url + registerAddress);
+    CloseableHttpResponse httpResponse = httpClient.execute(httpGet);
+    System.out.println("GET Response Status:: " + httpResponse.getStatusLine().getStatusCode());
+
+    BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()));
+    String inputLine;
+    StringBuffer response = new StringBuffer();
     
-            try {
-                HttpResponse response = client.execute(request);
-                ResponseHandler<String> handler = new BasicResponseHandler();
-                String text = handler.handleResponse(response);
-                token = text.split("\"")[3];
-                System.out.println(token);
-            } catch (IOException e) {
-                System.out.println("Couldn't get token!" + e);
-            }
+    while ((inputLine = reader.readLine()) != null) {
+        response.append(inputLine);
+    }
+    reader.close();
 `
 
 ## Objectives
