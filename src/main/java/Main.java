@@ -6,7 +6,8 @@
 public class Main {
     public static void main(String[] args) {
         try {
-            HttpTest.sendGET();
+            HttpTest.getToken();
+            HttpTest.getPageContent("http://localhost:5000/home");
         } catch (Exception e) {
             e.printStackTrace();
         }
