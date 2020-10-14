@@ -10,13 +10,18 @@ package com.beatrix.data;
 import com.beatrix.data.link.Route;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 
 public class DataManager {
+    // not processed data, directly from server(unserialized)
     public static ArrayList<Route> dataFromServer = new ArrayList<>();
+
+    // deserialized data from server and stored in local storage
     public static ArrayList<Data> localDataStorage = new ArrayList<>();
 
+    // getters for the local and server storage
     public static ArrayList<Data> getLocalDataStorage() {
         return localDataStorage;
     }
@@ -131,6 +136,35 @@ public class DataManager {
         System.out.println("Error: No such account data in system");
         return null;
     }
+
+    public static List<Data> getGlobCommand(String command) {
+        List<Data> listOfGlobs = new ArrayList<>();
+
+        if (command.contains("*")) {
+            String lastWord = command.replaceAll("^.*?(\\w+)\\W*$", "$1");
+
+            String[] penultimateWord = command.split("[ ]+");
+            System.out.println("Penultimate word: " + penultimateWord[penultimateWord.length - 2]);
+
+            String asteriskGlob = lastWord.substring(0);
+            for (int i = 0; i < localDataStorage.size(); i++) {
+                //localDataStorage.get(i);
+                if (localDataStorage.contains(asteriskGlob) && localDataStorage.contains(penultimateWord)) {
+                    //System.out.println("hereeee" + localDataStorage.get(i));
+                    //Data data = getDataById(asteriskGlob);
+                    listOfGlobs.add(localDataStorage.get(i));
+                    System.out.println("hereeeepppp" + listOfGlobs.toString());
+//                for (Data data : localDataStorage) {
+//                    data = getDataById(asteriskGlob);
+//                    listOfGlobs.add(data);
+//                    System.out.println(listOfGlobs.toString());
+//                }
+                }
+            }
+        }
+        return listOfGlobs;
+    }
+
 
     public static Data readClientCommand(String command) {
         //another way instead of regex - command.substring(command.lastIndexOf(" ")+1);

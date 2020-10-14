@@ -12,11 +12,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
-public class ClientHandler implements Runnable {
+public class RemoteReader implements Runnable {
     private static Socket clientDialog;
 
-    public ClientHandler(Socket client) {
-        ClientHandler.clientDialog = client;
+    public RemoteReader(Socket client) {
+        RemoteReader.clientDialog = client;
     }
 
     /**
@@ -44,24 +44,33 @@ public class ClientHandler implements Runnable {
                 } else if(command.equalsIgnoreCase("select random")){
                     output.writeUTF("Request result = " + DataManager.getRandomData());
                     System.out.println("SUCCESS");
-                } else if(command.contains("select")){
+                } else if(command.contains("SelectColumn")) {
                     command = command.trim().replaceAll(" +", " ").toLowerCase();
                     //String input = command.replaceAll("^.*?(\\w+)\\W*$", "$1");;
                     output.writeUTF("SERVER reply - " + DataManager.readClientCommand(command));
                     System.out.println("SUCCESS");
+                } else if(command.contains("SelectFromColumn")){
+                        command = command.trim().replaceAll(" +", " ").toLowerCase();
+                        //String input = command.replaceAll("^.*?(\\w+)\\W*$", "$1");;
+                        output.writeUTF("SERVER reply - " + DataManager.getGlobCommand(command));
+                        System.out.println("SUCCESS");
                 } else {
                     output.writeUTF("Request result = FAILED: check your command input!");
                     System.out.println("PASSED");
                 }
                 output.flush();
             }
-            input.close();
-            output.close();
-            clientDialog.close();
+            closeConnections(output, input);
             System.out.println("CLIENT disconnected.");
         } catch (IOException | InterruptedException e) {
             System.out.println("CLIENT disconnected.");
         }
+    }
+
+    synchronized public void closeConnections(DataOutputStream output, DataInputStream input) throws IOException {
+        input.close();
+        output.close();
+        clientDialog.close();
     }
 }
 

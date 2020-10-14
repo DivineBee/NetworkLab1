@@ -1,4 +1,5 @@
-package com.beatrix.data.link; /**
+package com.beatrix.data.link;
+/**
  * @author Beatrice V.
  * @created 07.09.2020 - 18:11
  * @project NetworkLab1
@@ -29,10 +30,20 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 
-public class PageInfo {
+public class PageInformation {
+    // concurrent storage of all found routes that must be processed
     private static BlockingQueue<String> concurrentRoutes = new LinkedBlockingQueue<>();
+
+    // concurrent storage of all currently processing routes
+    private static BlockingQueue<String> takenRoutes = new LinkedBlockingQueue<>();
+
+    // token of connection
     public static String token = null;
+
+    // url for connection
     public static final String url = "http://localhost:5000";
+
+    // postfixes for getting to correct urls
     private static final String registerAddress = "/register";
     public static final String homeAddress = "/home";
 
@@ -73,7 +84,6 @@ public class PageInfo {
      * Method which gets the content on the page and reads it.
      * @param address of the link to be get
      * @return content present on the link
-     * @exception IOException when there's none to read or can't get link
      */
     public static String getPageContent(String address) {
         String pageContent = null;
@@ -82,31 +92,69 @@ public class PageInfo {
         request.addHeader("X-Access-Token", token);
 
         try {
-            System.out.println(address);
             HttpResponse response = httpClient.execute(request);
             System.out.println(request);
-            System.out.println(response);
-            System.out.println(request.containsHeader("X-Access-Token"));
-            System.out.println(pageContent);
             ResponseHandler<String> handler = new BasicResponseHandler();
             pageContent = handler.handleResponse(response);
-            System.out.println(pageContent);
             httpClient.close();
         } catch (IOException e){
             System.out.println("Can't get home page content.");
         }
         return pageContent;
     }
-
     /**
      * Method for getting unserialized data from page and finding new links mentioned inside page.
      * Works using iterative approach of threads creation using concurrent safe structure LinkedBlockingQueue.
      * Requires setting first route by user.
      * @see LinkedBlockingQueue
-     * @exception IOException if link is not available
-     * @exception InterruptedException thrown when a thread is waiting or occupied, and the thread is interrupted,
+     * @return is work of getting all routes finished or not
      */
-    public static void findRoute(List<String> availableRoutes) {
+    public static boolean findRoute(){
+        // Here is the checking if some routes weren't processed(обработанные)
+        while(concurrentRoutes.size() > 0 || takenRoutes.size() > 0) {
+            // Number of routes which weren't processed
+            if(concurrentRoutes.size() == 0)
+                // continue is used for waiting the thread to finish its job and don't interrupt it with throwing exception
+                continue;
+
+            // Creates as many Threads as there are unhandled routes
+            new Thread(() -> {
+                // Create mapper for primary deserialization
+                ObjectMapper objectMapper = new ObjectMapper();
+                try {
+                    // pop head route from queue of unhandled routes(takes and deletes it from queue)
+                    String currentRoute = concurrentRoutes.take();
+                    //and place it to another list
+                    takenRoutes.offer(currentRoute);
+
+                    // Perform get request to current route and performs first partial deserialization
+                    Route routeData = objectMapper.readValue(PageInformation.getPageContent(currentRoute), Route.class);
+
+                    // Check if data from page contains links
+                    if (routeData.getLink() != null && routeData.getLink().size() > 0) {
+                        List<String> innerList = new ArrayList<>(routeData.getLink().values());
+                        // Try to append found links to the queue of unhandled routes
+                        for (int j = 0; j < innerList.size(); j++) {
+                            // Try appending until offer() returns true(successful appending)
+                            String fullpath = url + innerList.get(j);
+                            concurrentRoutes.offer(fullpath);
+                        }
+                    }
+                    // If it is not home address then add all data from page to database of json, xml and csv data.
+                    if (!(url + homeAddress).equals(currentRoute)) {
+                        DataManager.getDataFromServer().add(routeData);
+                    }
+                    takenRoutes.remove(currentRoute);
+                } catch (IOException | InterruptedException ie) {
+                    System.err.println("Can't read the links.\n" + ie);
+                }
+            }).start();
+        }
+        return true;
+    }
+
+    // Recursive way to find route
+    public static void recursiveFindRoute(List<String> availableRoutes) {
         if(availableRoutes != null && availableRoutes.size() > 0) {
             for(int i = 0; i < availableRoutes.size(); i++){
                 //considering that lambdas require work with final variables, was used this field
@@ -121,56 +169,13 @@ public class PageInfo {
                         }
                         if(routeData.getLink() != null && routeData.getLink().size() > 0){
                             List<String> innerList = new ArrayList<>(routeData.getLink().values());
-                            findRoute(innerList.stream().map(route ->
-                                    route = url + route)
-                                    .collect(Collectors.toList()));
+                            recursiveFindRoute(innerList.stream().map(route -> route = url + route).collect(Collectors.toList()));
                         }
-                    } catch (IOException e) {
-                        System.err.println("Error reading links from server, shutting program down.\n" + e);
+                    } catch (IOException ie) {
+                        System.err.println("Error reading links from server.\n" + ie);
                     }
                 }).start();
             }
-        } else System.err.println("No routes, check your connection or server");
+        } else System.err.println("No routes, check your connection or server!");
     }
-
-    /*public static void findRoute(){
-        // Here is the checking if some routes weren't processed(обработанные)
-        while(concurrentRoutes.size() > 0) {
-            // Number of routes which weren't processed
-            int currentSize = concurrentRoutes.size();
-            System.out.println(Thread.getAllStackTraces().size());
-            for (int i = 0; i < currentSize; i++) {
-                // Creates as many Threads as there are unhandled routes
-                new Thread(() -> {
-                    // Create mapper for primary deserialization
-                    ObjectMapper objectMapper = new ObjectMapper();
-                    try {
-                        // pop head route from queue of unhandled routes(takes and deletes it from queue)
-                        String currentRoute = concurrentRoutes.take();
-                        System.out.println(currentRoute);
-                        // Perform get request to current route and performs first partial deserialization
-                        Route routeData = objectMapper.readValue(PageInfo.getPageContent(currentRoute), Route.class);
-                        // If it is not home address then add all data from page to database of json, xml and csv data.
-                        if (!(url + homeAddress).equals(currentRoute)) {
-                            DataManager.getDataFromServer().add(routeData);
-                        }
-                        // Check if data from page contains links
-                        if (routeData.getLink() != null && routeData.getLink().size() > 0) {
-                            List<String> innerList = new ArrayList<>(routeData.getLink().values());
-                            // Try to append found links to the queue of unhandled routes
-                            for (int j = 0; j < innerList.size(); j++) {
-                                // Try appending until offer() returns true(successful appending)
-                                //while (!concurrentRoutes.offer(url + innerList.get(j))) { }
-                                String fullpath = url+innerList.get(j);
-                                concurrentRoutes.offer(fullpath);
-                            }
-                        }
-                    } catch (IOException | InterruptedException e) {
-                        System.err.println("Can't read the links.\n" + e);
-                    }
-                }).start();
-            }
-            while(Thread.getAllStackTraces().size()>6){};
-        }
-    }*/
 }
