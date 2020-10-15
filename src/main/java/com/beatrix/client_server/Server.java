@@ -20,13 +20,16 @@ import static com.beatrix.data.DataManager.localDataStorage;
 public class Server {
     // Thread pool for each Client if 6 clients then 6 threads which can run and so on.
     private static ExecutorService serverExecutor = Executors.newFixedThreadPool(6);
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         PageInformation.getToken();
         PageInformation.getConcurrentRoutes().offer(PageInformation.url + PageInformation.homeAddress);
+
         // These are needed for recursive approach
-//        ArrayList<String> availableRoutes = new ArrayList<>();
-//        availableRoutes.add(PageInformation.url + PageInformation.homeAddress);
-//        PageInformation.recursiveFindRoute(availableRoutes);
+        /*ArrayList<String> availableRoutes = new ArrayList<>();
+        availableRoutes.add(PageInformation.url + PageInformation.homeAddress);
+        PageInformation.recursiveFindRoute(availableRoutes);
+
+        while (Thread.activeCount() > 2){ }*/
 
         if(PageInformation.findRoute()){
             // append all obtained from service data deserializing it to the main db

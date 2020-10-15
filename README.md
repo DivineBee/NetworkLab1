@@ -31,52 +31,43 @@ retrieve the nested links? First I created a method which searched by regex (whi
 I remodeled the method to create and see how the recursive one will be doing, still wasn't happy because  
 that is not the best solution. After few days of thinking and studying I made up an iterative approach  
 which used the _BlockingQueue_ for storing the routes and has a thread per route traversal(thrown in some  
-comments to be explicit) so my lovely creation:   
+comments to be explicit), so my implementation of _run()_ using iterative method of finding routes(can be found  
+in class _MyRunnable_ and used in method _findRoute()_ in class _PageInformation_:   
 ```java
- public static boolean findRoute(){
-        // Here is the checking if some routes weren't processed
-        while(concurrentRoutes.size() > 0 || takenRoutes.size() > 0) {
-            // Number of routes which weren't processed
-            if(concurrentRoutes.size() == 0)
-                continue;
-
-            // Creates as many Threads as there are unhandled routes
-            new Thread(() -> {
-                // Create mapper for primary deserialization
-                ObjectMapper objectMapper = new ObjectMapper();
-                try {
-                    // pop head route from queue of unhandled routes(takes and deletes it from queue)
-                    String currentRoute = concurrentRoutes.take();
-                    takenRoutes.offer(currentRoute);
-
-                    // Perform get request to current route and performs first partial deserialization
-                    Route routeData = objectMapper.readValue(PageInformation.getPageContent(currentRoute), Route.class);
-
-                    // Check if data from page contains links
-                    if (routeData.getLink() != null && routeData.getLink().size() > 0) {
-                        List<String> innerList = new ArrayList<>(routeData.getLink().values());
-                        // Try to append found links to the queue of unhandled routes
-                        for (int j = 0; j < innerList.size(); j++) {
-                            // Try appending until offer() returns true(successful appending)
-                            //while (!concurrentRoutes.offer(url + innerList.get(j))) { }
-                            String fullpath = url + innerList.get(j);
-                            concurrentRoutes.offer(fullpath);
-                        }
-                    }
-
-                    // If it is not home address then add all data from page to database of json, xml and csv data.
-                    if (!(url + homeAddress).equals(currentRoute)) {
-                        DataManager.getDataFromServer().add(routeData);
-                    }
-
-                    takenRoutes.remove(currentRoute);
-                } catch (IOException | InterruptedException e) {
-                    System.err.println("Can't read the links.\n" + e);
-                }
-            }).start();
-        }
-        return true;
-    }
+ @Override
+     public void run() {
+         // Create mapper for primary deserialization of json
+         ObjectMapper objectMapper = new ObjectMapper();
+         try {
+             // Perform get request to current route and performs first partial deserialization
+             Route routeData = objectMapper.readValue(PageInformation.getPageContent(routeToHandle), Route.class);
+ 
+             // Check if data from page contains links
+             if (routeData.getLink() != null && routeData.getLink().size() > 0) {
+                 // Transform all links to arrayList
+                 List<String> innerList = new ArrayList<>(routeData.getLink().values());
+ 
+                 // Try to append found links to the queue of unhandled routes
+                 for (int j = 0; j < innerList.size(); j++) {
+                     // Try appending until offer() returns true(successful appending)
+                     String fullpath = PageInformation.url + innerList.get(j);
+                     PageInformation.getConcurrentRoutes().offer(fullpath);
+                 }
+             }
+ 
+             // If it is not home address then add all data from page to database of json, xml and csv data.
+             if (!(PageInformation.url + PageInformation.homeAddress).equals(routeToHandle)) {
+                 DataManager.getDataFromServer().add(routeData);
+             }
+ 
+             // Decrease counter of active threads by one finalizing work of thread
+             synchronized (PageInformation.getActiveThreadsCount()) {
+                 PageInformation.getActiveThreadsCount().getAndDecrement();
+             }
+         } catch (IOException e) {
+             System.err.println("Can't read the links.\n" + e);
+         }
+     }
 ```
 After doing the hardest part, came into play the simpler part of retrieving the data from page and put it in  
 some local storage. I created a package called com.beatrix.data used only for work with data, there I have the  

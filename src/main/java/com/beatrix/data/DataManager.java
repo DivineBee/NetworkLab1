@@ -137,30 +137,25 @@ public class DataManager {
         return null;
     }
 
-    public static List<Data> getGlobCommand(String command) {
-        List<Data> listOfGlobs = new ArrayList<>();
+    public static <T> List<T> getGlobCommand(String command) {
+        List<T> listOfGlobs = new ArrayList<>();
+
+        List<T> localList = (List<T>) getLocalDataStorage();;
 
         if (command.contains("*")) {
             String lastWord = command.replaceAll("^.*?(\\w+)\\W*$", "$1");
 
-            String[] penultimateWord = command.split("[ ]+");
-            System.out.println("Penultimate word: " + penultimateWord[penultimateWord.length - 2]);
-
+            String[] cutWord = command.split("[ ]+");
+            String penultimateWord = cutWord[cutWord.length - 2];
             String asteriskGlob = lastWord.substring(0);
-            for (int i = 0; i < localDataStorage.size(); i++) {
-                //localDataStorage.get(i);
-                if (localDataStorage.contains(asteriskGlob) && localDataStorage.contains(penultimateWord)) {
-                    //System.out.println("hereeee" + localDataStorage.get(i));
-                    //Data data = getDataById(asteriskGlob);
-                    listOfGlobs.add(localDataStorage.get(i));
-                    System.out.println("hereeeepppp" + listOfGlobs.toString());
-//                for (Data data : localDataStorage) {
-//                    data = getDataById(asteriskGlob);
-//                    listOfGlobs.add(data);
-//                    System.out.println(listOfGlobs.toString());
-//                }
+
+            for (T l : localList){
+                if(command.contains(penultimateWord) && command.contains(asteriskGlob)){
+                    //localList.getDataById(asteriskGlob);
+                    listOfGlobs.add(l);
                 }
             }
+            System.out.println("globs- " + listOfGlobs.toString());
         }
         return listOfGlobs;
     }

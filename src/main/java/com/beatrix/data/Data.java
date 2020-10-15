@@ -73,20 +73,20 @@ public class Data {
     @Override
     public String toString() {
         return "Data---> " +
-                "| id= " + id + ' ' +
-                "| employee_id= " + employee_id + ' ' +
-                "| bitcoin_address= " + bitcoin_address + ' ' +
-                "| ip_address= " + ip_address + ' ' +
-                "| first_name= " + first_name + ' ' +
-                "| last_name= " + last_name + ' ' +
-                "| full_name= " + full_name + ' ' +
-                "| username= " + username + ' ' +
-                "| email= " + email + ' ' +
-                "| gender= " + gender + ' ' +
-                "| card_number= " + card_number + ' ' +
-                "| card_balance= " + card_balance + ' ' +
-                "| card_currency= " + card_currency + ' ' +
-                "| organization= " + organization + ' ' +
-                "| created_account_data= " + created_account_data + " |";
+                "| id = " + id + ' ' +
+                "| employee_id = " + employee_id + ' ' +
+                "| bitcoin_address = " + bitcoin_address + ' ' +
+                "| ip_address = " + ip_address + ' ' +
+                "| first_name = " + first_name + ' ' +
+                "| last_name = " + last_name + ' ' +
+                "| full_name = " + full_name + ' ' +
+                "| username = " + username + ' ' +
+                "| email = " + email + ' ' +
+                "| gender = " + gender + ' ' +
+                "| card_number = " + card_number + ' ' +
+                "| card_balance = " + card_balance + ' ' +
+                "| card_currency = " + card_currency + ' ' +
+                "| organization = " + organization + ' ' +
+                "| created_account_data = " + created_account_data + " |";
     }
 }

@@ -29,55 +29,66 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PageInformation {
     // concurrent storage of all found routes that must be processed
     private static BlockingQueue<String> concurrentRoutes = new LinkedBlockingQueue<>();
-
-    // concurrent storage of all currently processing routes
-    private static BlockingQueue<String> takenRoutes = new LinkedBlockingQueue<>();
-
+    //  counter of active threads at moment
+    private static AtomicInteger activeThreadsCount = new AtomicInteger(0);
     // token of connection
     public static String token = null;
-
     // url for connection
     public static final String url = "http://localhost:5000";
-
     // postfixes for getting to correct urls
     private static final String registerAddress = "/register";
     public static final String homeAddress = "/home";
 
+    // getters
     public static BlockingQueue<String> getConcurrentRoutes() {
         return concurrentRoutes;
     }
+    public static AtomicInteger getActiveThreadsCount() { return activeThreadsCount; }
 
     /**
      * This method gets http request to the url register address and reads the token
      * through buffered reader and extracts the token which will be next used in accessing
      * future routes
-     * @return access token for page
      */
-    public static String getToken(){
+    public static void getToken(){
+        // initialize http client
         CloseableHttpClient httpClient = HttpClients.createDefault();
-        HttpGet request = new HttpGet(url + registerAddress);
-        try {
-            CloseableHttpResponse httpResponse = httpClient.execute(request);
 
+        //  create get http request that will be transmitted via client
+        HttpGet request = new HttpGet(url + registerAddress);
+
+        try {
+            // get response to request from page
+            CloseableHttpResponse httpResponse = httpClient.execute(request);
+            // get content (payload) from http response, removing http-related data
             BufferedReader reader = new BufferedReader(new InputStreamReader(httpResponse.getEntity().getContent()));
-            String inputLine;
+            // builder for appending multiple strings in one big text
             StringBuilder response = new StringBuilder();
+            // string for reading line-by-line content of page
+            String inputLine;
+
+            // check if there is next line in text
             while ((inputLine = reader.readLine()) != null) {
+                // if there is then append line to response text
                 response.append(inputLine);
             }
+            // close stream
             reader.close();
 
+            // transform json-formatted text from page to tree (hashmap) of elements
             JsonNode parent = new ObjectMapper().readTree(response.toString());
+
+            // find value attached to the key "access_token" in text of page
             token = parent.path("access_token").asText();
             System.out.println("Access Token: " + token);
         } catch (IOException e){
             System.out.println("Can't get Token.");
         }
-        return token;
     }
 
     /**
@@ -86,15 +97,23 @@ public class PageInformation {
      * @return content present on the link
      */
     public static String getPageContent(String address) {
+        //  initialize string for getting content of page
         String pageContent = null;
+        //  create client for http
         CloseableHttpClient httpClient = HttpClients.createDefault();
+        //  make http-get request to address
         HttpGet request = new HttpGet(address);
+        //  append token to the header of your http-get request
         request.addHeader("X-Access-Token", token);
 
         try {
+            //  perform request via client
             HttpResponse response = httpClient.execute(request);
             System.out.println(request);
+
+            //  handle response as string removing http-related data and append it to pageContent variable
             ResponseHandler<String> handler = new BasicResponseHandler();
+            System.out.println(response);
             pageContent = handler.handleResponse(response);
             httpClient.close();
         } catch (IOException e){
@@ -107,48 +126,20 @@ public class PageInformation {
      * Works using iterative approach of threads creation using concurrent safe structure LinkedBlockingQueue.
      * Requires setting first route by user.
      * @see LinkedBlockingQueue
-     * @return is work of getting all routes finished or not
+     * @return work of getting all routes finished or not
      */
-    public static boolean findRoute(){
-        // Here is the checking if some routes weren't processed(обработанные)
-        while(concurrentRoutes.size() > 0 || takenRoutes.size() > 0) {
-            // Number of routes which weren't processed
+    public static boolean findRoute() throws InterruptedException {
+        // Here is the checking if some routes weren't processed
+        while(concurrentRoutes.size() > 0 || activeThreadsCount.get() > 0) {
+//          // Number of routes which weren't processed
             if(concurrentRoutes.size() == 0)
-                // continue is used for waiting the thread to finish its job and don't interrupt it with throwing exception
                 continue;
 
-            // Creates as many Threads as there are unhandled routes
-            new Thread(() -> {
-                // Create mapper for primary deserialization
-                ObjectMapper objectMapper = new ObjectMapper();
-                try {
-                    // pop head route from queue of unhandled routes(takes and deletes it from queue)
-                    String currentRoute = concurrentRoutes.take();
-                    //and place it to another list
-                    takenRoutes.offer(currentRoute);
-
-                    // Perform get request to current route and performs first partial deserialization
-                    Route routeData = objectMapper.readValue(PageInformation.getPageContent(currentRoute), Route.class);
-
-                    // Check if data from page contains links
-                    if (routeData.getLink() != null && routeData.getLink().size() > 0) {
-                        List<String> innerList = new ArrayList<>(routeData.getLink().values());
-                        // Try to append found links to the queue of unhandled routes
-                        for (int j = 0; j < innerList.size(); j++) {
-                            // Try appending until offer() returns true(successful appending)
-                            String fullpath = url + innerList.get(j);
-                            concurrentRoutes.offer(fullpath);
-                        }
-                    }
-                    // If it is not home address then add all data from page to database of json, xml and csv data.
-                    if (!(url + homeAddress).equals(currentRoute)) {
-                        DataManager.getDataFromServer().add(routeData);
-                    }
-                    takenRoutes.remove(currentRoute);
-                } catch (IOException | InterruptedException ie) {
-                    System.err.println("Can't read the links.\n" + ie);
-                }
-            }).start();
+            // pop head route from queue of unhandled routes(takes and deletes it from queue)
+            String currentRoute = concurrentRoutes.take();
+            activeThreadsCount.getAndIncrement();
+            // creates thread with already overwritten run() from MyRunnable and pass to its constructor - current route
+            new Thread(new MyRunnable(currentRoute)).start();
         }
         return true;
     }
