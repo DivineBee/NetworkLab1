@@ -162,8 +162,9 @@ public class DataManager {
 
 
     public static Data readClientCommand(String command) {
-        //another way instead of regex - command.substring(command.lastIndexOf(" ")+1);
-        String lastWord = command.replaceAll("^.*?(\\w+)\\W*$", "$1");
+        //another way using regex to get last word - command.replaceAll("^.*?(\\w+)\\W*$", "$1"));
+        String lastWord = command.substring(command.lastIndexOf(" ")+1);
+        //System.out.println(lastWord);
         //for globbing commands(in progress):
         /*String[] array = {"*", "{", "}", "[", "]", "-", "(", "^"};
 
@@ -193,7 +194,7 @@ public class DataManager {
             }
             //System.out.println(data.substring(Integer.parseInt(command.replaceAll("^.*?(\\w+)\\W*$", "$1"))) + matchingGlobs);
         } else {*/
-        if (command.contains("id")) return getDataById(lastWord);
+        if (command.contains("employee_id")) return getDataByEmployeeId(lastWord);
         else if (command.contains("first_name")) return getDataByFirstName(lastWord);
         else if (command.contains("last_name")) return getDataByLastName(lastWord);
         else if (command.contains("bitcoin_address")) return getDataByBitcoinAddress(lastWord);
@@ -201,7 +202,7 @@ public class DataManager {
         else if (command.contains("ip_address")) return getDataByIp(lastWord);
         else if (command.contains("card_number")) return getDataByCardNumber(lastWord);
         else if (command.contains("full_name")) return getDataByFullName(lastWord);
-        else if (command.contains("employee_id")) return getDataByEmployeeId(lastWord);
+        else if (command.contains("id")) return getDataById(lastWord);
         else if (command.contains("username")) return getDataByUsername(lastWord);
         else if (command.contains("created_account_data")) return getDataByCreatedAccount(lastWord);
 
