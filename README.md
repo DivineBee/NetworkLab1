@@ -29,7 +29,7 @@ which permitted me to read the json contents from the page, I also used it to re
 data from page but on that later on... The reading of the page was simple - now the hardest part. How to  
 retrieve the nested links? First I created a method which searched by regex (which was not an option) then  
 I remodeled the method to create and see how the recursive one will be doing, still wasn't happy because  
-that is not the best solution. After few days of thinking and studying I made up an iterative approach  
+that is not the best solution. After some long days of thinking and studying I made up an iterative approach  
 which used the _BlockingQueue_ for storing the routes and has a thread per route traversal(thrown in some  
 comments to be explicit), so my implementation of _run()_ using iterative method of finding routes(can be found  
 in class _MyRunnable_ and used in method _findRoute()_ in class _PageInformation_:   
